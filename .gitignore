@@ -1,0 +1,16 @@
+**/build/
+**/sdkconfig
+**/sdkconfig.old
+**/sdkconfig.ci
+
+**/.vscode/
+**/.devcontainer/
+
+**/components/
+
+**/.cache/
+**/__pycache__/
+**/*.pyc
+
+.DS_Store
+Thumbs.db
