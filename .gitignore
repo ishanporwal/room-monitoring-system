@@ -12,5 +12,7 @@
 **/__pycache__/
 **/*.pyc
 
+**/secrets.h
+
 .DS_Store
 Thumbs.db

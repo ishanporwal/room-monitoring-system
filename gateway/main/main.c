@@ -10,9 +10,10 @@
 #include "esp_event.h"
 #include "esp_netif.h"
 #include "mqtt_client.h"
+#include "esp_crt_bundle.h"
 
-#define WIFI_SSID ""
-#define WIFI_PASS ""
+#include "secrets.h"
+
 #define WIFI_CONNECTED_BIT BIT0
 
 #define UART_RX_PIN GPIO_NUM_16
@@ -141,7 +142,6 @@ static void mqtt_event_handler(void *handler_args,
                                void *event_data)
 {
     esp_mqtt_event_handle_t event = event_data;
-
     switch (event->event_id) {
         case MQTT_EVENT_CONNECTED:
             mqtt_connected = true;
@@ -158,10 +158,14 @@ static void mqtt_event_handler(void *handler_args,
     }
 }
 
-static void init_mqtt(void)
-{
+static void init_mqtt(void) {
     esp_mqtt_client_config_t cfg = {
-        .broker.address.uri = "mqtt://test.mosquitto.org",
+        .broker.address.uri = MQTT_BROKER_URI,
+        .broker.verification.crt_bundle_attach = esp_crt_bundle_attach,
+        .credentials = {
+            .username = MQTT_USERNAME,
+            .authentication.password = MQTT_PASSWORD,
+        }
     };
     mqtt_client = esp_mqtt_client_init(&cfg);
     esp_mqtt_client_register_event(
@@ -176,8 +180,7 @@ static void init_mqtt(void)
 
 /* -------------------- UART -------------------- */
 
-static void init_uart(void)
-{
+static void init_uart(void) {
     uart_config_t cfg = {
         .baud_rate = UART_BAUD,
         .data_bits = UART_DATA_8_BITS,
@@ -197,8 +200,7 @@ static void init_uart(void)
     );
 }
 
-void uart_rx_task(void *arg)
-{
+void uart_rx_task(void *arg) {
     uint8_t byte;
     uart_frame_t frame;
     uint8_t *p = (uint8_t *)&frame;
@@ -206,19 +208,14 @@ void uart_rx_task(void *arg)
 
     while (1) {
         uart_read_bytes(UART_PORT, &byte, 1, portMAX_DELAY);
-
         if (idx == 0 && byte != UART_START_BYTE) {
             continue;
         }
-
         p[idx++] = byte;
-
         if (idx == sizeof(uart_frame_t)) {
             if (frame.start == UART_START_BYTE &&
                 frame.length == sizeof(room_packet_t)) {
-
                 room_packet_t *pkt = &frame.payload;
-
                 ESP_LOGI(TAG,
                     "Occ=%d Light=%d Temp=%.1fF Hum=%.1f%% Heat=%d Cool=%d Hum=%d",
                     pkt->occupied,
@@ -229,7 +226,6 @@ void uart_rx_task(void *arg)
                     pkt->need_cooling,
                     pkt->need_humidifier
                 );
-
                 publish_room_state(pkt);
             }
             idx = 0;
@@ -239,8 +235,7 @@ void uart_rx_task(void *arg)
 
 /* -------------------- Tasks -------------------- */
 
-void mqtt_task(void *arg)
-{
+void mqtt_task(void *arg) {
     ESP_LOGI("MQTT", "Waiting for Wi-Fi...");
     xEventGroupWaitBits(
         wifi_event_group,
@@ -254,8 +249,7 @@ void mqtt_task(void *arg)
     vTaskDelete(NULL);
 }
 
-void app_main(void)
-{
+void app_main(void) {
     ESP_LOGI(TAG, "Starting gateway...");
 
     init_wifi();
