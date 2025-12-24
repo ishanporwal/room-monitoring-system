@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Room Monitor</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      max-width: 400px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h1 {
+      margin-top: 0;
+    }
+    .row {
+      margin: 8px 0;
+      font-size: 18px;
+    }
+    .label {
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h1>Room Monitor</h1>
+
+    <div class="row"><span class="label">Occupied:</span> <span id="occupied">–</span></div>
+    <div class="row"><span class="label">Light On:</span> <span id="light">–</span></div>
+    <div class="row"><span class="label">Temperature:</span> <span id="temp">–</span> °F</div>
+    <div class="row"><span class="label">Humidity:</span> <span id="hum">–</span> %</div>
+    <div class="row"><span class="label">Heating Needed:</span> <span id="heat">–</span></div>
+    <div class="row"><span class="label">Cooling Needed:</span> <span id="cool">–</span></div>
+    <div class="row"><span class="label">Humidifier Needed:</span> <span id="humidifier">–</span></div>
+
+    <div class="row" style="margin-top:12px; font-size:14px; color:#666;">
+      Last update: <span id="updated">–</span>
+    </div>
+  </div>
+
+<script>
+
+const socket = new WebSocket(
+  "wss://backend.room-monitor.workers.dev"
+);
+
+  socket.onopen = () => {
+    console.log("Connected to backend");
+  };
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    document.getElementById('occupied').textContent = data.occupied ? 'Yes' : 'No';
+    document.getElementById('light').textContent = data.light_on ? 'Yes' : 'No';
+    document.getElementById('temp').textContent = data.temperature_f.toFixed(1);
+    document.getElementById('hum').textContent = data.humidity.toFixed(1);
+    document.getElementById('heat').textContent = data.need_heating ? 'Yes' : 'No';
+    document.getElementById('cool').textContent = data.need_cooling ? 'Yes' : 'No';
+    document.getElementById('humidifier').textContent = data.need_humidifier ? 'Yes' : 'No';
+    document.getElementById('updated').textContent = new Date().toLocaleTimeString();
+  };
+  socket.onerror = (err) => {
+    console.error("WebSocket error", err);
+  };
+  socket.onclose = () => {
+    console.warn("WebSocket closed");
+  };
+</script>
+
+</body>
+</html>
